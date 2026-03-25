@@ -22,9 +22,21 @@ def load_data():
 
 @st.cache_resource
 def load_model():
+    from sklearn.ensemble import RandomForestClassifier
     filename = "finalized_default_model.sav"
-    loaded_model = pickle.load(open(filename, "rb"))
-    return(loaded_model)
+    try:
+        with open(filename, "rb") as f:
+            return pickle.load(f)
+    except Exception:
+        # Retrain if saved model is incompatible with current scikit-learn version
+        train_data = pd.read_csv("prosper_data_app_dev.csv").dropna()
+        X = pd.get_dummies(train_data.drop("loan_default", axis=1), drop_first=True)
+        y = train_data["loan_default"]
+        retrained_model = RandomForestClassifier(n_estimators=100, random_state=42)
+        retrained_model.fit(X, y)
+        with open(filename, "wb") as f:
+            pickle.dump(retrained_model, f)
+        return retrained_model
 
 # Load Data and Model
 data = load_data()
